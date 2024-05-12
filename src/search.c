@@ -1,6 +1,11 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "search.h"
 #include "print.h"
 #include "scandir.h"
+
+#define CHUNK_SIZE 512
 
 size_t alpha_skip_lookup[256];
 size_t *find_skip_lookup;
@@ -258,6 +263,88 @@ ssize_t search_stream(FILE *stream, const char *path) {
     return matches_count;
 }
 
+
+size_t remove_ansi_escape_codes_in_place(char *str) {
+    size_t i = 0; // Index for reading input
+    size_t j = 0; // Index for writing output
+
+    // TODO - ssize_t or size_t?
+    // TODO - can be j
+    size_t new_size = 0;
+
+    while (str[i] != '\0') {
+        if (str[i] == '\033') {
+            // Skip ANSI escape codes until 'm' or end of string
+            while (str[i] != 'm' && str[i] != '\0') {
+                i++;
+            }
+            // Skip 'm' if it's found
+            if (str[i] == 'm') {
+                i++;
+            }
+        } else {
+            // Copy non-escape code characters to their correct position
+            str[j++] = str[i++];
+            new_size++;
+        }
+    }
+    // Null terminate the result string
+    str[j] = '\0';
+
+    return new_size;
+}
+
+void read_chunk(ssize_t* all_bytes_read, ssize_t* bytes_read, ssize_t* all_buf_used, size_t* cleaned_chunk_length, const char* buf, char* chunk) {
+    (*all_bytes_read) += (*bytes_read);
+
+    // Null terminate the chunk
+    chunk[*bytes_read] = '\0';
+
+    // Remove ANSI escape codes from the chunk
+    (*cleaned_chunk_length) = remove_ansi_escape_codes_in_place(chunk);
+
+    // Append the chunk to the buffer
+    memcpy(buf + (*all_buf_used), chunk, *cleaned_chunk_length);
+
+    // Update the actual buffer length
+    (*all_buf_used) += (*cleaned_chunk_length);
+}
+
+ssize_t read_file_in_chunks_without_ansi(int fd, ssize_t f_len, char *buf, size_t already_read_bytes_length, const char* file_full_path) {
+    ssize_t all_buf_used = 0;
+    ssize_t all_bytes_read = 0;
+    ssize_t bytes_read = 0;
+    size_t cleaned_chunk_length = 0;
+
+    char chunk[CHUNK_SIZE + 1]; // +1 for null terminator
+
+    if(already_read_bytes_length > 0) {
+        // Simulate
+        bytes_read = already_read_bytes_length;
+
+        // Copy the already read buffer to chunk
+        strncpy(chunk, buf, already_read_bytes_length);
+
+        // Clear the buffer to reach to clean state to be like in regular read chunk
+        memset(buf, 0, bytes_read);
+
+        read_chunk(&all_bytes_read, &bytes_read, &all_buf_used, &cleaned_chunk_length, buf, chunk);
+    }
+
+    while (all_bytes_read < f_len && (bytes_read = read(fd, chunk, CHUNK_SIZE)) > 0) {
+        read_chunk(&all_bytes_read, &bytes_read, &all_buf_used, &cleaned_chunk_length, buf, chunk);
+    }
+
+
+    // TODO - should free the chunk?
+
+    if (all_bytes_read != f_len) {
+        die("File %s read(): expected to read %u bytes but read %u", file_full_path, f_len, all_bytes_read);
+    }
+
+    return all_buf_used;
+}
+
 void search_file(const char *file_full_path) {
     int fd = -1;
     off_t f_len = 0;
@@ -355,7 +442,8 @@ void search_file(const char *file_full_path) {
     }
 #else
 
-    if (opts.mmap) {
+    // mmap not supported when used in conjunction with strip ansi codes
+    if (opts.mmap && !opts.strip_ansi_codes) {
         buf = mmap(0, f_len, PROT_READ, MAP_PRIVATE, fd, 0);
         if (buf == MAP_FAILED) {
             log_err("File %s failed to load: %s.", file_full_path, strerror(errno));
@@ -380,11 +468,16 @@ void search_file(const char *file_full_path) {
             }
         }
 
-        while (bytes_read < f_len) {
-            bytes_read += read(fd, buf + bytes_read, f_len);
-        }
-        if (bytes_read != f_len) {
-            die("File %s read(): expected to read %u bytes but read %u", file_full_path, f_len, bytes_read);
+        if(opts.strip_ansi_codes) {
+            f_len = read_file_in_chunks_without_ansi(fd, f_len, buf, bytes_read, file_full_path);
+        } else {
+             while (bytes_read < f_len) {
+                 bytes_read += read(fd, buf + bytes_read, f_len);
+             }
+
+             if (bytes_read != f_len) {
+                 die("File %s read(): expected to read %u bytes but read %u", file_full_path, f_len, bytes_read);
+             }
         }
     }
 #endif

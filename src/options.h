@@ -60,6 +60,7 @@ typedef struct {
     int print_break;
     int print_count;
     int print_filename_only;
+    int print_matches;
     int print_nonmatching_files;
     int print_path;
     int print_all_paths;
@@ -77,6 +78,7 @@ typedef struct {
     int search_stream; /* true if tail -F blah | ag */
     int stats;
     size_t stream_line_num; /* This should totally not be in here */
+    int strip_ansi_codes;
     int match_found;        /* This should totally not be in here */
     ino_t stdout_inode;
     char *query;
