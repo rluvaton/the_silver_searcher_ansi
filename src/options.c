@@ -70,7 +70,7 @@ Output Options:\n\
      --[no]numbers        Print line numbers. Default is to omit line numbers\n\
                           when searching streams\n\
   -o --only-matching      Prints only the matching part of the lines\n\
-     --[no]print-matches Print the content of the matched results\n\
+     --[no]print-matches  Print the content of the matched results\n\
      --print-long-lines   Print matches on very long lines (Default: >2k characters)\n\
      --passthrough        When searching a stream, print all lines even if they\n\
                           don't match\n\
