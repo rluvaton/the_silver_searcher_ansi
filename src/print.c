@@ -132,11 +132,18 @@ void print_path_count(const char *path, const char sep, const size_t count) {
 
 void print_line(const char *buf, size_t buf_pos, size_t prev_line_offset) {
     size_t write_chars = buf_pos - prev_line_offset + 1;
-    if (opts.width > 0 && opts.width < write_chars) {
+    if(opts.print_matches == FALSE) {
+        write_chars = 0;
+    } else if (opts.width > 0 && opts.width < write_chars) {
         write_chars = opts.width;
     }
 
     fwrite(buf + prev_line_offset, 1, write_chars, out_fd);
+
+    // As we gonna remove the newline character, we need to add it manually
+    if(write_chars == 0) {
+        fprintf(out_fd, "\n");
+    }
 }
 
 void print_binary_file_matches(const char *path) {

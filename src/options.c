@@ -70,6 +70,7 @@ Output Options:\n\
      --[no]numbers        Print line numbers. Default is to omit line numbers\n\
                           when searching streams\n\
   -o --only-matching      Prints only the matching part of the lines\n\
+     --[no]print-matching Print the content of the matched results\n\
      --print-long-lines   Print matches on very long lines (Default: >2k characters)\n\
      --passthrough        When searching a stream, print all lines even if they\n\
                           don't match\n\
@@ -77,6 +78,7 @@ Output Options:\n\
      --stats              Print stats (files scanned, time taken, etc.)\n\
      --stats-only         Print stats and nothing else.\n\
                           (Same as --count when searching a single file)\n\
+     --strip-ansi-codes   Ignore ansi codes in file for search and locations, this will output locations without ansi codes (Default: false).\n\
      --vimgrep            Print results like vim's :vimgrep /pattern/g would\n\
                           (it reports every match on the line)\n\
   -0 --null --print0      Separate filenames with null (for 'xargs -0')\n\
@@ -174,6 +176,8 @@ void init_options(void) {
     opts.color_match = ag_strdup(color_match);
     opts.color_line_number = ag_strdup(color_line_number);
     opts.use_thread_affinity = TRUE;
+    opts.print_matches = TRUE;
+    opts.strip_ansi_codes = FALSE;
 }
 
 void cleanup_options(void) {
@@ -303,6 +307,7 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[]) {
         { "nonumbers", no_argument, &opts.print_line_numbers, FALSE },
         { "no-pager", no_argument, NULL, 0 },
         { "nopager", no_argument, NULL, 0 },
+        { "no-print-matches", no_argument, &opts.print_matches, FALSE },
         { "no-recurse", no_argument, NULL, 'n' },
         { "norecurse", no_argument, NULL, 'n' },
         { "null", no_argument, NULL, '0' },
@@ -316,6 +321,7 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[]) {
         { "path-to-ignore", required_argument, NULL, 'p' },
         { "print0", no_argument, NULL, '0' },
         { "print-all-files", no_argument, NULL, 0 },
+        { "print-matches", no_argument, &opts.print_matches, TRUE },
         { "print-long-lines", no_argument, &opts.print_long_lines, 1 },
         { "recurse", no_argument, NULL, 'r' },
         { "search-binary", no_argument, &opts.search_binary_files, 1 },
@@ -326,6 +332,7 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[]) {
         { "smart-case", no_argument, NULL, 'S' },
         { "stats", no_argument, &opts.stats, 1 },
         { "stats-only", no_argument, NULL, 0 },
+        { "strip-ansi-codes", no_argument, &opts.strip_ansi_codes, TRUE },
         { "unrestricted", no_argument, NULL, 'u' },
         { "version", no_argument, &version, 1 },
         { "vimgrep", no_argument, &opts.vimgrep, 1 },
