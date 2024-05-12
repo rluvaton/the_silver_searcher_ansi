@@ -70,7 +70,7 @@ Output Options:\n\
      --[no]numbers        Print line numbers. Default is to omit line numbers\n\
                           when searching streams\n\
   -o --only-matching      Prints only the matching part of the lines\n\
-     --[no]print-matching Print the content of the matched results\n\
+     --[no]print-matches Print the content of the matched results\n\
      --print-long-lines   Print matches on very long lines (Default: >2k characters)\n\
      --passthrough        When searching a stream, print all lines even if they\n\
                           don't match\n\
@@ -308,6 +308,7 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[]) {
         { "no-pager", no_argument, NULL, 0 },
         { "nopager", no_argument, NULL, 0 },
         { "no-print-matches", no_argument, &opts.print_matches, FALSE },
+        { "noprint-matches", no_argument, &opts.print_matches, FALSE },
         { "no-recurse", no_argument, NULL, 'n' },
         { "norecurse", no_argument, NULL, 'n' },
         { "null", no_argument, NULL, '0' },
